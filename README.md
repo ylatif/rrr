@@ -20,11 +20,11 @@ Installation
 
 If you use this work, please cite our corresponding paper : 
 
-@INPROCEEDINGS{Latif-RSS-12,
-  author = {Y. Latif and C. Cadena and J. Neira},
-  title = {{Robust Loop Closing Over Time}},
-  booktitle = {Proceedings of Robotics: Science and Systems},
-  year = {2012},
-  address = {Sydney, Australia},
-  month = {July}
+@INPROCEEDINGS{Latif-RSS-12,<br>
+  author = {Y. Latif and C. Cadena and J. Neira},<br>
+  title = {{Robust Loop Closing Over Time}},<br>
+  booktitle = {Proceedings of Robotics: Science and Systems},<br>
+  year = {2012},<br>
+  address = {Sydney, Australia},<br>
+  month = {July}<br>
 }
