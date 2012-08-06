@@ -9,11 +9,12 @@ Requirements
 - g2o http://www.openslam.org/g2o
 - boost math libraries
 
-*Installation*
+Installation
+-------------
 
 - First install g2o (http://www.openslam.org/g2o) following the instructions given
-- sudo apt-get install libboost-math1.42-dev
-- in the build folder of this project do "make" 
+- install boost maths ( On ubuntu : sudo apt-get install libboost-math1.42-dev)
+- in the build folder of this project do "make" (Please check if library paths are correct) 
 - this will generate an executable by the name "rrr"
-- follow the instruction in the readme file in the build folder
+- follow the instruction in the readme file in the build folder for running the example
 
