@@ -1,9 +1,29 @@
-/*
- * GraphManager.hpp
- *
- *  Created on: Feb 22, 2012
- *      Author: yasir
- */
+// RRR - Robust Loop Closing over Time
+// Copyright (C) 2012 Y.Latif, C.Cadena, J.Neira
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+// * Redistributions in binary form must reproduce the above copyright
+//   notice, this list of conditions and the following disclaimer in the
+//   documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+// TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 #ifndef GRAPHMANAGER_HPP_
 #define GRAPHMANAGER_HPP_
@@ -14,6 +34,7 @@
 
 typedef std::pair<int,int> intPair;
 
+//template <typename VertexPtrType>
 
 class GraphManager{
 
@@ -22,7 +43,7 @@ public:
 	typedef std::map< intPair, int > LoopClosureClusterIDMap;
 	typedef std::vector< std::vector< intPair > > ClusterCollection;
 
-	typedef g2o::VertexSE2* VertexPtrType;	//Changing this will be needed when Vertex types change.
+	//typedef g2o::VertexSE2* VertexPtrType;	//Changing this will be needed when Vertex types change.
 
 
 private:
@@ -63,56 +84,15 @@ public:
 		return true;
 	}
 
-	// To differentiate b/w intra- & inter-session loopClosures
-	/*
-	int getVertexSessionID(int vertexID)
-	{
-		if(_limits.empty()){
-			std::cerr<<__PRETTY_FUNCTION__<<" WARNING : SESSION_LIMITS_NOT_DEFINED "<<std::endl;
-			return -1;
-		}
-		size_t i=0, end = _limits.size();
 
-		for( ; i<end; i++)
-		{
-			if(vertexID == _limits[i]){	return (int)i; }
-			else if(vertexID  < _limits[i] ) {	return i;}
+	bool write(const std::string filename)
+		{ return optimizer.save(filename.c_str()); }
 
-		}
-		return _limits.size()-1;
-	}
-	*/
-	/*
-	intPair getEdgeSessionIDs(const intPair& loopClosure)
-	{
-		if(_limits.empty()){
-			std::cerr<<__PRETTY_FUNCTION__<<" WARNING : SESSION_LIMITS_NOT_DEFINED "<<std::endl;
-			return intPair(0,0);
-		}
-		intPair membership; membership.first = 0 ; membership.second=0;
-		size_t i=1, end = _limits.size();
-		for( ; i<end; i++)
-		{
-			if(loopClosure.first  < _limits[i] and loopClosure.first  > _limits[i-1]) { membership.first = i;}
-			if(loopClosure.second < _limits[i] and loopClosure.second > _limits[i-1]) { membership.second = i;}
-		}
-
-		return membership;
-	}
-	*/
-
-	/*
-	bool setSessionLimits(const std::vector<int>& sessionLimits)	{	_limits = sessionLimits;	return true;	}
-	*/
-
-	bool write(const std::string filename){ return optimizer.save(filename.c_str()); }
-
-	const LoopClosureSet& loopClousures(){	return _loopClosures;}
+	const LoopClosureSet& loopClousures()
+		{	return _loopClosures;}
 
 	int clusterCount()
-	{
-		return _clusterCount;
-	}
+		{ return _clusterCount;	 }
 
 	void clusterize(const int& threshold )
 	{
@@ -157,22 +137,6 @@ public:
 			return _loopClosureClusterIDMap[loopClosure];
 		else
 			return -2;
-	}
-
-	intPair getSessionIDfromClusterID(int clusterID)
-	{
-		return intPair(0,0);
-		/*
-		if(clusterID< (int)_clusterCollection.size())
-		{
-			return getEdgeSessionIDs(_clusterCollection[clusterID][0]);
-		}
-		else
-		{
-			std::cerr<<__PRETTY_FUNCTION__<<" Invalid clusterID :"<<clusterID<<std::endl;
-			return intPair(-1,-1);
-		}
-		*/
 	}
 
 	void setClusterID(const intPair& loopClosure, int ID)

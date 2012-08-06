@@ -1,13 +1,36 @@
-/*
- * OptimizationManager.hpp
- *
- *  Created on: Feb 23, 2012
- *      Author: yasir
- */
+// RRR - Robust Loop Closing over Time
+// Copyright (C) 2012 Y.Latif, C.Cadena, J.Neira
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the following disclaimer.
+// * Redistributions in binary form must reproduce the above copyright
+//   notice, this list of conditions and the following disclaimer in the
+//   documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+// TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 #ifndef OPTIMIZATIONMANAGER_HPP_
 #define OPTIMIZATIONMANAGER_HPP_
 
+#ifndef DISPLAY_MSGS
+#define DISPLAY_MSGS 1
+#endif
 //#include "Viewer/Viewer.hpp"
 
 #include <g2o/core/factory.h>
@@ -19,17 +42,12 @@
 #include <g2o/types/slam3d/edge_se3_quat.h>
 #include <g2o/types/slam3d/vertex_se3_quat.h>
 
-
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 
 #include <boost/math/distributions/chi_squared.hpp>
 
-//#include "AnchorEdge.hpp"
 #include "GraphManager.hpp"
 #include "GraphStorage.hpp"
-
-#include "Timer.hpp"
-
 
 
 using namespace g2o;
@@ -80,45 +98,29 @@ class OptimizationManager
 
 public :
 	OptimizationManager(){
-		//Factory * factory = Factory::instance();
-		//factory->registerType("EDGE_ANCHOR", new HyperGraphElementCreator<EdgeAnchor>);
 
 		linearSolver = new SlamLinearSolver();
 		linearSolver->setBlockOrdering(false);
 		solver = new SlamBlockSolver(&optimizer, linearSolver);
 		optimizer.setSolver(solver);
-
 		_initialized = false;
 
-		//_viewer = new Viewer(optimizer);
 	}
 
 	~OptimizationManager(){
-
-		//_odometryMap.clear();
-		//_loopClosureMap.clear();
-		//optimizer.clear();
 
 	}
 
 	bool read(	 // Read the Graph, calculate clustering and sessionIDs, convert to Anchored Graph and store
 			const std::string filename,
-			std::vector<int> sessionLimits,
 			int clusteringThreshold = 50,
 			int iterations = 4
 	)
 	{
-		if(!_graphManager.read(filename))
-		{
-			//std::cerr<<"Could not read : "<<filename.c_str()<<std::endl;
-			return false;
-		}
+		if(!_graphManager.read(filename)) return false;
 
 		_iterations = iterations;
 
-		if(sessionLimits.empty()) sessionLimits.push_back(_graphManager.optimizer.vertices().size());
-
-//		_graphManager.setSessionLimits(sessionLimits);
 		_graphManager.clusterize(clusteringThreshold);
 
 
@@ -182,8 +184,6 @@ public :
 
 		_graphStorage.store(optimizer);
 
-		optimizer.save("test.g2o");
-
 		return true;
 	}
 
@@ -232,14 +232,9 @@ public :
 		optimizer.setVerbose(false);
 		g2o::OptimizableGraph::Vertex* v_fixed;
 
-		std::cerr<<" GF "<<std::endl;
 
-		//if(optimizer.gaugeFreedom())
-		{
-			v_fixed = optimizer.vertex(0);
-			//std::cout<<v_fixed->id()<<" fixed "<<std::endl;
-			v_fixed->setFixed(true);
-		}
+		v_fixed = optimizer.vertex(0);
+		v_fixed->setFixed(true);
 
 		optimizer.initializeOptimization(activeEdges);
 
@@ -254,11 +249,11 @@ public :
 
 		return true;
 	}
-
-	std::vector<bool> individualCompatibility(int clusterID){
+	// individual compatibility is referred to as InterClusterConsistency
+	std::vector<bool> intraClusterConsistency(int clusterID){
 
 		_computedIC_clusterID[clusterID] = true;
-		std::cerr<<"-- IC "<<clusterID<<" --"<<std::endl;
+		if (DISPLAY_MSGS) std::cerr<<clusterID<<" ";
 		std::vector<int> clusters;
 
 		clusters.push_back(clusterID);
@@ -292,22 +287,22 @@ public :
 			if(_loopClosureMap[thisPair]->chi2() < linkThreshold)
 			{
 				isOkay[i] = true;
-				std::cout<<"[ ]";
+				//std::cout<<"[ ]";
 			}
-			else std::cout<<"[X]";
+			//else std::cout<<"[X]";
 		}
-		std::cout<<std::endl;
+		//std::cout<<std::endl;
 
 		//std::cout<<std::endl;
 
-		double allThreshold = _chi2(vertexType::Dimension*(maxVertexID - minVertexID)-1); //The number of vertices involved
+		double allThreshold = _chi2(edgeType::Dimension*(maxVertexID - minVertexID)-1); //The number of vertices involved
 		//double allThreshold = _chi2(3*optimizer.edges().size()-1);
 
-		std::cout<<"   "<<errorSum<<" / "<<allThreshold<<std::endl;
+		//std::cout<<"   "<<errorSum<<" / "<<allThreshold<<std::endl;
 
 		if(errorSum > allThreshold)
 		{
-			std::cerr<<"All rejected "<<std::endl;
+			//std::cerr<<"All rejected "<<std::endl;
 			return std::vector<bool>(loopEdges.size(),false);
 		}
 		else
@@ -320,14 +315,14 @@ public :
 				if(!isOkay[i]) _graphManager.setClusterID(loopEdges[i],-2);
 			}
 			//std::cout<<std::endl;
-			 	std::cerr<<"  Accepted  : "<< accepted <<"/"<<loopEdges.size()<<std::endl;
+			// 	std::cerr<<"  Accepted  : "<< accepted <<"/"<<loopEdges.size()<<std::endl;
 			//std::cin.get();
 			return isOkay;
 		}
 
-				}
+	}
 
-	bool jointCompatibility(
+	bool interClusterConsistency(
 			std::vector<int>& H,
 			std::vector<int>& rejected,
 			int checkLast,
@@ -367,13 +362,14 @@ public :
 			}
 		}
 
-		double chi2Links = _chi2(3*linkCount -1);
-		double chi2all   = _chi2(3*optimizer.edges().size()-1);
+		double chi2Links = _chi2(edgeType::Dimension*linkCount -1);
+		double chi2all   = _chi2(edgeType::Dimension*optimizer.edges().size()-1);
+
 		double overallError = 0;
 
 		for( errorIt = errors.begin(); errorIt!=errors.end() ; errorIt++) overallError+= (*errorIt);
 
-		std::cout<< "("<<checkLast<<") JC : "<<overallError<<" / "<<chi2Links<<std::endl;
+		//std::cout<< "("<<checkLast<<") JC : "<<overallError<<" / "<<chi2Links<<std::endl;
 		if ( (overallError < chi2Links and optimizer.activeChi2() < chi2all) or
 				checkLast==0)
 		{
@@ -398,20 +394,24 @@ public :
 			//std::cerr<<"rejectedClusterID "<<H_now[rejectedClusterID]<<std::endl;
 			rejected.push_back(H[rejectedClusterID]);
 			H.erase(H.begin()+rejectedClusterID);
-			return jointCompatibility(H,rejected,checkLast-1);
+			return interClusterConsistency(H,rejected,checkLast-1);
 		}
 		return true;
 	}
 
 	void init(
 			const std::string filename,
-			std::vector<int> sessionLimits,
-			int clusteringThreshold = 50,
-			int iterations = 4
+			float odometryRate = 5.,
+			float placeRecognitionRate = 1.0
 	)
 	{
-		read(filename,sessionLimits,clusteringThreshold,iterations);
-		//std::cerr<<"Done reading ... "<<std::endl;
+		int numberOfOptimizerIterations = 4;
+		int clusteringThreshold = (10.*(float)odometryRate)/(float)placeRecognitionRate; //10 seconds =t_g
+
+		std::cout<<clusteringThreshold<<std::endl;
+
+		read(filename,clusteringThreshold, numberOfOptimizerIterations);
+
 
 		_computedIC_clusterID = std::vector<bool>(_graphManager.clusterCount(),false);
 
@@ -420,7 +420,7 @@ public :
 		_initialized = true;
 	}
 
-	void RRR(std::set<int> sessionsIn = std::set<int>())
+	void RRR(std::vector< intPair>& goodLinks, bool writeg2oOutput=false)
 	{
 		if(!_initialized)
 		{
@@ -430,13 +430,19 @@ public :
 
 		std::vector<int> clustersToExplore;					//Clusters Associated with the included Sessions
 
-		std::set< int > sessionsIncluded;
+		//std::set< int > sessionsIncluded;
+		if(DISPLAY_MSGS){
+			std::cout<<" Number of loop-closing links : "<<_loopClosureMap.size()<<std::endl;
+			std::cout<<" Number of clusters : "<<_graphManager.clusterCount()<<std::endl;
 
+			std::cerr<<" Intra cluster consistency : ";
+		}
 		for(int x=0 ; x< _graphManager.clusterCount() ; x++)
 		{
-			individualCompatibility(x);
+			intraClusterConsistency(x);
 			clustersToExplore.push_back(x);
 		}
+		if(DISPLAY_MSGS) std::cerr<<std::endl;
 
 
 		std::set<int> goodClusters,			// Clusters selected in every iteration
@@ -451,8 +457,10 @@ public :
 			std::set< int > toConsider; // Clusters not in the goodSet
 			for(size_t i=0 ; i<clustersToExplore.size(); i++)
 			{
-				if(selectedClusters.find(clustersToExplore[i])==selectedClusters.end()
-						and rejectedClusters.find(clustersToExplore[i])==rejectedClusters.end())
+				if(
+						selectedClusters.find(clustersToExplore[i])==selectedClusters.end()
+						and rejectedClusters.find(clustersToExplore[i])==rejectedClusters.end()
+				)
 				{ // Not in the selected Cluster nor in reject
 					toConsider.insert(clustersToExplore[i]);
 				}
@@ -460,15 +468,15 @@ public :
 
 			done = true;
 
-			std::cout<<"-----------> "<<_iterations<<std::endl;
-			optimizeClusterList(std::vector<int>(toConsider.begin(),toConsider.end()),_iterations);
+			//std::cout<<"-----------> "<<_iterations<<std::endl;
+			optimizeClusterList(std::vector<int>(toConsider.begin(),toConsider.end()));
 
 			optimizer.computeActiveErrors();
 			for( typename LoopClosureMap::iterator
 					cIt = _loopClosureMap.begin(),
 					cEnd = _loopClosureMap.end() ;
-				cIt!=cEnd ;
-				cIt++
+					cIt!=cEnd ;
+					cIt++
 			)
 			{
 				double myClusterID = _graphManager.getClusterID( cIt->first );
@@ -481,17 +489,14 @@ public :
 				)
 				{
 					goodClusters.insert(myClusterID);
-					//std::cout<<"["<<myClusterID<<"]";
 					done = false;
 				}
-				//else	std::cout<<"[X]";
 
 			}
 
-			//if( goodClusters.size() == 0 ) continue;
-
-			//std::cout<<" Good Set "; display(selectedClusters) ; std::cout<<std::endl;
-			std::cout<<" Candidates "; display(goodClusters) ; std::cout<<std::endl;
+			if(DISPLAY_MSGS) {
+				std::cout<<"\nInterClusterConsistency: \n\tCandidates :\t"; display(goodClusters) ; std::cout<<std::endl;
+			}
 
 			H.clear();
 			H.insert(H.end(), selectedClusters.begin(), selectedClusters.end());
@@ -501,7 +506,7 @@ public :
 
 			int oldSize = selectedClusters.size();
 
-			jointCompatibility(H,rejected, goodClusters.size());
+			interClusterConsistency(H,rejected, goodClusters.size());
 
 			//std::cerr<<" JC returned "<<std::endl;
 
@@ -522,21 +527,32 @@ public :
 				rejectedClusters.clear();
 			}
 			rejectedClusters.insert(rejected.begin(), rejected.end());
+			if(DISPLAY_MSGS){
+				std::cout<<"\tCAccepted : \t"; display(selectedClusters); std::cout<<std::endl;
+				std::cout<<"\tRejected  : \t" ; display(rejectedClusters); std::cout<<std::endl;
+			}
 
-			//std::cout<<std::endl;
-
-			std::cout<<"Current Good Set "; display(selectedClusters); std::cout<<std::endl;
-			std::cout<<"Rejected List" << std::endl ; display(rejectedClusters); std::cout<<std::endl;
-
-			//	std::cin.get();
+			//optimizeClusterList(std::vector<int>(selectedClusters.begin(),selectedClusters.end()));
+			//_graphStorage.reset(optimizer);
 
 		}
 
+		goodLinks.clear();
 
+
+
+		for(std::set<int>::iterator it = selectedClusters.begin(), end = selectedClusters.end();it!=end ;it++)
+		{
+			std::vector<intPair> thisCluster = _graphManager.getClusterbyID(*it);
+			goodLinks.insert(goodLinks.end(), thisCluster.begin(), thisCluster.end());
+		}
+
+		if(!writeg2oOutput) return;
 
 		_graphStorage.load(optimizer);
 
-		write("out_unopt.g2o", selectedClusters, sessionsIncluded);
+		write("out_accept.g2o", selectedClusters);
+
 
 		for(size_t i=0; i<clustersToExplore.size();i++)
 		{
@@ -546,22 +562,15 @@ public :
 			}
 		}
 
-		write("out_unopt_reject.g2o", rejectedClusters, sessionsIncluded);
+		write("out_reject.g2o", rejectedClusters);
 
 		std::vector< std::vector < intPair > > e;
 		std::vector< std::set<int> > subs;
 
 		optimizeClusterList(std::vector<int>(selectedClusters.begin(),selectedClusters.end()));
 
-		//_graphStorage.store(optimizer);
+		write("out_opt.g2o", selectedClusters);
 
-		//std::stringstream filename;
-
-		//filename<<"out_"<<x<<".g2o";
-
-		//write(filename.str(), selectedClusters, sessionsIncluded);
-
-		optimizer.save("out_anchor.g2o");
 
 	}
 
@@ -573,8 +582,9 @@ public :
 		}
 	}
 
-	void write(std::string filename, std::set<int>& clusters, std::set<int>& sessionsIncluded)
+	void write(std::string filename, std::set<int>& clusters)
 	{
+
 		int maxVertexID = -1;
 
 		for(std::set<int>::iterator
@@ -606,7 +616,8 @@ public :
 				vIt++)
 		{
 			//if(sessionsIncluded.empty()){
-				out<<"VERTEX_SE2 "<<vIt->second->id()<<" "; dynamic_cast<vertexType*>(vIt->second)->write(out); out<<std::endl;
+
+			out<<"VERTEX_SE2 "<<vIt->second->id()<<" "; dynamic_cast<vertexType*>(vIt->second)->write(out); out<<std::endl;
 			//}
 			/*else if(
 					sessionsIncluded.find(_graphManager.getVertexSessionID(vIt->second->id()))!= sessionsIncluded.end() and
@@ -625,10 +636,10 @@ public :
 		)
 		{
 			//if(sessionsIncluded.empty()){
-				out<<"EDGE_SE2 "<<it->second->vertices()[0]->id()<<" "
-						<<it->second->vertices()[1]->id()<<" "; it->second->write(out); out<<std::endl;
+			out<<"EDGE_SE2 "<<it->second->vertices()[0]->id()<<" "
+					<<it->second->vertices()[1]->id()<<" "; it->second->write(out); out<<std::endl;
 			//}
-				/*
+			/*
 			else if(
 					sessionsIncluded.find(_graphManager.getVertexSessionID(it->second->vertices()[0]->id())) != sessionsIncluded.end() and
 					sessionsIncluded.find(_graphManager.getVertexSessionID(it->second->vertices()[1]->id())) != sessionsIncluded.end()
@@ -637,7 +648,7 @@ public :
 				out<<"EDGE_SE2 "<<it->second->vertices()[0]->id()<<" "
 						<<it->second->vertices()[1]->id()<<" "; it->second->write(out); out<<std::endl;
 			}
-			*/
+			 */
 		}
 
 		for(std::set<int>::iterator
