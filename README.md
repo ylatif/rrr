@@ -18,3 +18,13 @@ Installation
 - this will generate an executable by the name "rrr"
 - follow the instruction in the readme file in the build folder for running the example
 
+If you use this work, please cite our corresponding paper : 
+
+@INPROCEEDINGS{Latif-RSS-12,
+  author = {Y. Latif and C. Cadena and J. Neira},
+  title = {{Robust Loop Closing Over Time}},
+  booktitle = {Proceedings of Robotics: Science and Systems},
+  year = {2012},
+  address = {Sydney, Australia},
+  month = {July}
+}
