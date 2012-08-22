@@ -86,7 +86,7 @@ class OptimizationManager
 	double _chi2(int dof)
 	{
 		if(dof>0)
-			return boost::math::quantile(boost::math::chi_squared(dof),0.99);
+			return boost::math::quantile(boost::math::chi_squared(dof),0.95);
 		else
 		{
 			std::cerr<<__LINE__<<" dof <= 0 ? "<<std::endl;
@@ -156,8 +156,8 @@ public :
 				anchoredEdge->vertices()[1] = optimizer.vertex(thisEdge.second);
 
 
-				anchoredEdge->setInformation(static_cast<edgeType*>(*eIt)->information());
 				anchoredEdge->setMeasurement(static_cast<edgeType*>(*eIt)->measurement());
+				anchoredEdge->setInformation(static_cast<edgeType*>(*eIt)->information());
 
 				optimizer.addEdge(static_cast<edgeType*>(anchoredEdge));;
 
@@ -203,6 +203,7 @@ public :
 		_graphStorage.load(optimizer);
 
 		OptimizableGraph::EdgeSet activeEdges;
+		//std::cout<<" Optimizing on clusters  ";
 		for(
 				std::vector<int>::const_iterator
 				it = clusterList.begin(),
@@ -212,12 +213,17 @@ public :
 		)
 		{
 			std::vector< intPair > loopEdges = _graphManager.getClusterbyID(*it);
+			//std::cout<<*it<<" ";
 			for(size_t j=0; j<loopEdges.size();j++)
 			{
+				//std::cout<<_graphManager.getClusterID(loopEdges[j])<<" : ( "<<loopEdges[j].first<<" "<<loopEdges[j].second<<" )";
+				//std::cout<<*it<<": ( "<<loopEdges[j].first<<" "<<loopEdges[j].second<<" )"<<std::endl;
 				activeEdges.insert(dynamic_cast<OptimizableGraph::Edge*>(_loopClosureMap[loopEdges[j]]));
 			}
+
 		}
 
+		//std::cout<<std::endl;
 		for(
 				typename OdometryMap::iterator
 				it= _odometryMap.begin(),
@@ -232,19 +238,24 @@ public :
 		optimizer.setVerbose(false);
 		g2o::OptimizableGraph::Vertex* v_fixed;
 
-
 		v_fixed = optimizer.vertex(0);
 		v_fixed->setFixed(true);
 
 		optimizer.initializeOptimization(activeEdges);
 
 		int optStatus;
-		if(iterations<0)
+		//if(iterations<0)
 			optStatus = optimizer.optimize(_iterations);
-		else
-			optStatus = optimizer.optimize(iterations);
+
+		//else
+		//	optStatus = optimizer.optimize(iterations);
 
 		v_fixed->setFixed(false);
+
+
+		optimizer.computeActiveErrors();
+		//std::cout<<"OPT "<<optimizer.activeChi2()<<" in "<<_iterations<<" iterations"<<std::endl ;
+
 
 
 		return true;
@@ -253,26 +264,14 @@ public :
 	std::vector<bool> intraClusterConsistency(int clusterID){
 
 		_computedIC_clusterID[clusterID] = true;
-		if (DISPLAY_MSGS) std::cerr<<clusterID<<" ";
+		if (DISPLAY_MSGS) std::cout<<clusterID<<" ";
+		std::cout.flush();
+
 		std::vector<int> clusters;
-
 		clusters.push_back(clusterID);
-
 		optimizeClusterList(clusters);
 
-		int 	minVertexID = std::numeric_limits<int>::max(),
-				maxVertexID = std::numeric_limits<int>::min();
-
 		std::vector<intPair> loopEdges = _graphManager.getClusterbyID(clusterID);
-
-		for(std::vector< intPair >::iterator it = loopEdges.begin(), end = loopEdges.end();
-				it!=end ; it++)
-		{
-			//		std::cerr<<it->first<<" "<<it->second<<std::endl;
-			if(it->first > maxVertexID) maxVertexID = it->first;
-			if(it->second < minVertexID ) minVertexID = it->second;
-		}
-
 		std::vector<bool> isOkay(loopEdges.size(),false);
 
 		double errorSum = 0;
@@ -287,22 +286,20 @@ public :
 			if(_loopClosureMap[thisPair]->chi2() < linkThreshold)
 			{
 				isOkay[i] = true;
-				//std::cout<<"[ ]";
 			}
-			//else std::cout<<"[X]";
 		}
-		//std::cout<<std::endl;
 
-		//std::cout<<std::endl;
+		//double allThreshold = _chi2(edgeType::Dimension*(maxVertexID - minVertexID +1)-1); //The number of vertices involved
+		double allThreshold = _chi2(3*optimizer.activeEdges().size()-1);
 
-		double allThreshold = _chi2(edgeType::Dimension*(maxVertexID - minVertexID)-1); //The number of vertices involved
-		//double allThreshold = _chi2(3*optimizer.edges().size()-1);
+		//std::cout<<"   "<<optimizer.activeChi2()<<" / "<<allThreshold<<std::endl;
 
-		//std::cout<<"   "<<errorSum<<" / "<<allThreshold<<std::endl;
-
-		if(errorSum > allThreshold)
+		if(optimizer.activeChi2() > allThreshold)
 		{
-			//std::cerr<<"All rejected "<<std::endl;
+			for(size_t i=0 ; i< loopEdges.size(); i++)
+			{
+				_graphManager.setClusterID(loopEdges[i],-2);
+			}
 			return std::vector<bool>(loopEdges.size(),false);
 		}
 		else
@@ -310,13 +307,9 @@ public :
 			int accepted = 0;
 			for(size_t i=0 ; i< loopEdges.size(); i++)
 			{
-				//(isOkay[i])? //std::cout<<"[ ]"://std::cout<<"[X]";
 				accepted +=isOkay[i];
 				if(!isOkay[i]) _graphManager.setClusterID(loopEdges[i],-2);
 			}
-			//std::cout<<std::endl;
-			// 	std::cerr<<"  Accepted  : "<< accepted <<"/"<<loopEdges.size()<<std::endl;
-			//std::cin.get();
 			return isOkay;
 		}
 
@@ -337,13 +330,12 @@ public :
 			return true;
 		}
 
-		optimizeClusterList(H,iterations);
+		optimizeClusterList(H);
 
 		optimizer.computeActiveErrors();
 
 		std::vector<double> errors( H.size(), 0.);
 		std::vector<double>::iterator errorIt = errors.begin();
-
 
 
 		int linkCount = 0;
@@ -356,14 +348,18 @@ public :
 					cIt++
 			)
 			{
-				_loopClosureMap[*cIt]->computeError();
-				(*errorIt) += _loopClosureMap[*cIt]->chi2();
-				linkCount++;
+				edgeType* thisEdge = _loopClosureMap[(*cIt)];
+				thisEdge->computeError();
+				(*errorIt) += thisEdge->chi2();
+				linkCount=linkCount+1;
 			}
 		}
 
-		double chi2Links = _chi2(edgeType::Dimension*linkCount -1);
-		double chi2all   = _chi2(edgeType::Dimension*optimizer.edges().size()-1);
+		double chi2Links = _chi2(3*linkCount -1);
+
+		//std::cout<<" #### DOF "<<3*linkCount -1<<" ### "<<std::endl;
+
+		double chi2all   = _chi2(3*optimizer.activeEdges().size()-1);
 
 		double overallError = 0;
 
@@ -381,7 +377,7 @@ public :
 			double  minConsistencyIndex = 0;
 			for(size_t i= H.size() - checkLast; i<H.size();i++)
 			{
-				double consistencyIndex = errors[i]/(_chi2(_graphManager.getClusterbyID(H[i]).size()*3 -1 ));
+				double consistencyIndex = errors[i];// /(_chi2(_graphManager.getClusterbyID(H[i]).size()*3 -1 ));
 				//std::cout<<consistencyIndex<<" ("<<H_now[i]<<") ";
 				if(consistencyIndex > minConsistencyIndex)
 				{
@@ -391,7 +387,7 @@ public :
 			}
 
 			//std::cout<<std::endl;
-			//std::cerr<<"rejectedClusterID "<<H_now[rejectedClusterID]<<std::endl;
+			//std::cerr<<"rejectedClusterID "<<H[rejectedClusterID]<<std::endl;
 			rejected.push_back(H[rejectedClusterID]);
 			H.erase(H.begin()+rejectedClusterID);
 			return interClusterConsistency(H,rejected,checkLast-1);
@@ -405,10 +401,10 @@ public :
 			float placeRecognitionRate = 1.0
 	)
 	{
-		int numberOfOptimizerIterations = 4;
+		int numberOfOptimizerIterations = 3;
 		int clusteringThreshold = (10.*(float)odometryRate)/(float)placeRecognitionRate; //10 seconds =t_g
 
-		std::cout<<clusteringThreshold<<std::endl;
+		std::cout<<"Clustering threshold :"<<clusteringThreshold<<std::endl;
 
 		read(filename,clusteringThreshold, numberOfOptimizerIterations);
 
@@ -439,9 +435,12 @@ public :
 		}
 		for(int x=0 ; x< _graphManager.clusterCount() ; x++)
 		{
-			intraClusterConsistency(x);
-			clustersToExplore.push_back(x);
+			std::vector<bool> result = intraClusterConsistency(x);
+			int sum = 0;
+			for(size_t sz=0; sz< result.size(); sz++ ) sum+=result[sz];
+			if(sum>0) clustersToExplore.push_back(x);
 		}
+
 		if(DISPLAY_MSGS) std::cerr<<std::endl;
 
 
@@ -452,9 +451,12 @@ public :
 		std::vector< int > H;
 		bool done = false;
 
+		std::vector< int > toConsider; // Clusters not in the goodSet
+
 		while(!done)
 		{
-			std::set< int > toConsider; // Clusters not in the goodSet
+			toConsider.clear();
+			//std::cout<<"Will consider : ";
 			for(size_t i=0 ; i<clustersToExplore.size(); i++)
 			{
 				if(
@@ -462,14 +464,24 @@ public :
 						and rejectedClusters.find(clustersToExplore[i])==rejectedClusters.end()
 				)
 				{ // Not in the selected Cluster nor in reject
-					toConsider.insert(clustersToExplore[i]);
+					//std::cout<<clustersToExplore[i]<<" ";
+					toConsider.push_back(clustersToExplore[i]);
 				}
 			}
+			//std::cout<<std::endl;
 
 			done = true;
 
 			//std::cout<<"-----------> "<<_iterations<<std::endl;
-			optimizeClusterList(std::vector<int>(toConsider.begin(),toConsider.end()));
+			optimizeClusterList(toConsider,_iterations);
+			std::cout<<__FUNCTION__<<":"<<__LINE__<<" optimizer.chi2 "<<optimizer.activeChi2()<<std::endl;
+
+			//std::set<int> L;
+			//L.insert(toConsider.begin(),toConsider.end());
+			//write("this.g2o",L);
+
+			//exit(0);
+
 
 			optimizer.computeActiveErrors();
 			for( typename LoopClosureMap::iterator
@@ -479,15 +491,16 @@ public :
 					cIt++
 			)
 			{
-				double myClusterID = _graphManager.getClusterID( cIt->first );
+				int myClusterID = _graphManager.getClusterID( cIt->first );
 				cIt->second->computeError();
 				double myError = cIt->second->chi2();
 				if (selectedClusters.find(myClusterID)==selectedClusters.end()
 						and rejectedClusters.find(myClusterID)==rejectedClusters.end()
-						and	myError < _chi2(3-1)
+						and	myError <= _chi2(3-1)
 						and myClusterID>=0
 				)
 				{
+					//std::cout<<myClusterID<<" : "<<cIt->first.first<<","<<cIt->first.second<<std::endl;
 					goodClusters.insert(myClusterID);
 					done = false;
 				}
@@ -498,6 +511,10 @@ public :
 				std::cout<<"\nInterClusterConsistency: \n\tCandidates :\t"; display(goodClusters) ; std::cout<<std::endl;
 			}
 
+			//optimizer.save("this.g2o");
+
+			//exit(0);
+
 			H.clear();
 			H.insert(H.end(), selectedClusters.begin(), selectedClusters.end());
 			H.insert(H.end(), goodClusters.begin(), goodClusters.end());
@@ -507,6 +524,7 @@ public :
 			int oldSize = selectedClusters.size();
 
 			interClusterConsistency(H,rejected, goodClusters.size());
+
 
 			//std::cerr<<" JC returned "<<std::endl;
 
@@ -528,7 +546,7 @@ public :
 			}
 			rejectedClusters.insert(rejected.begin(), rejected.end());
 			if(DISPLAY_MSGS){
-				std::cout<<"\tCAccepted : \t"; display(selectedClusters); std::cout<<std::endl;
+				std::cout<<"\tAccepted  : \t"; display(selectedClusters); std::cout<<std::endl;
 				std::cout<<"\tRejected  : \t" ; display(rejectedClusters); std::cout<<std::endl;
 			}
 

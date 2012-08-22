@@ -85,7 +85,7 @@ public:
 						break;
 					}
 				}
-				if(currentCluster == NULL)
+				if(currentCluster == NULL) // Does not belong to any existing cluster.
 				{
 					cluster s(start,end);
 					_clustersFound.push_back(s);
@@ -93,13 +93,14 @@ public:
 				}
 			}
 		}
+
 		if(0)
 		{
 			std::cout<<" \% Clusters formed "<<_clustersFound.size()<<std::endl;
 			std::cout<<"limits = [ "<<std::endl;
 			for(size_t i=0 ; i< _clustersFound.size() ; i++)
 			{
-				//std::cout<<_clustersFound[i].size<<" :"<<std::endl;
+				std::cout<<i<<" -> sz "<<_clustersFound[i].size<<" :: ";
 				std::cout<<" "<<_clustersFound[i].startLow<<" "<<_clustersFound[i].startHigh<<" ";
 				std::cout<<" "<<_clustersFound[i].endLow<<" "<<_clustersFound[i].endHigh<<std::endl;;
 
@@ -116,6 +117,7 @@ public:
 			std::cout<<std::endl;
 			std::cout<<"]; "<<std::endl;
 		}
+
 		clusterCount = _clustersFound.size();
 	}
 
