@@ -3,15 +3,12 @@ ASSUMPTIONS and RESTRICTIONS
 Please read this carefully if you want to run your own examples with this code
 
 - The code has only been tested for EDGE_SE2 and VERTEX_SE2 types at the moment.
-- If there is an edge between two vertices :
-    	- It is loop closure if starting edge id > ending edge id (loops close from future nodes to past nodes)
-    	- Odometry link otherwise.
 - Currently only runs in batch mode and expects to read a g2o file from the system
 
 
 Running the code 
 
-The example code expects three arguments\
+The example code expects three arguments:
 	- name of the g2o file to read
 	- Odometry Rate (in Hertz)
 	- Loop Closure rate ( in Hertz )

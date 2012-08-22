@@ -264,8 +264,11 @@ public :
 	std::vector<bool> intraClusterConsistency(int clusterID){
 
 		_computedIC_clusterID[clusterID] = true;
-		if (DISPLAY_MSGS) std::cout<<clusterID<<" ";
-		std::cout.flush();
+		if (DISPLAY_MSGS){
+			std::cout<<clusterID<<" ";
+			std::cout.flush();
+		}
+
 
 		std::vector<int> clusters;
 		clusters.push_back(clusterID);
@@ -572,13 +575,16 @@ public :
 		write("out_accept.g2o", selectedClusters);
 
 
-		for(size_t i=0; i<clustersToExplore.size();i++)
+		for(int i=0; i<_graphManager.clusterCount();i++)
 		{
-			if(selectedClusters.find(clustersToExplore[i])==selectedClusters.end())
+			if(selectedClusters.find(i)==selectedClusters.end())
 			{
-				rejectedClusters.insert(clustersToExplore[i]);
+				rejectedClusters.insert(i);
 			}
 		}
+
+		rejectedClusters.insert(-2); // Rejected by intracluster test
+
 
 		write("out_reject.g2o", rejectedClusters);
 
@@ -600,31 +606,8 @@ public :
 		}
 	}
 
-	void write(std::string filename, std::set<int>& clusters)
+	void write(const std::string filename, const std::set<int>& clusters)
 	{
-
-		int maxVertexID = -1;
-
-		for(std::set<int>::iterator
-				it = clusters.begin(), end = clusters.end();
-				it!=end;
-				it++
-		)
-		{
-			std::vector< intPair > m =_graphManager.getClusterbyID((*it));
-
-			for(size_t i=0; i< m.size() ; i++)
-			{
-				if(m[i].first > maxVertexID ) maxVertexID = m[i].first;
-				if(m[i].second > maxVertexID ) maxVertexID = m[i].second;
-			}
-		}
-
-		if(maxVertexID<0)
-		{
-			//std::cerr<<"I refuse to write! "<<std::endl;
-			return;
-		}
 
 		std::ofstream out(filename.c_str());
 		for(
@@ -669,6 +652,16 @@ public :
 			 */
 		}
 
+		for(typename LoopClosureMap::iterator it= _loopClosureMap.begin(), end = _loopClosureMap.end(); it!=end; it++)
+		{
+			if( clusters.find(_graphManager.getClusterID(it->first))!=clusters.end())
+			{
+				out<<"EDGE_SE2 "<<it->first.first<<" "<<it->first.second<<" ";
+				it->second->write(out); out <<std::endl;
+			}
+		}
+
+		/*
 		for(std::set<int>::iterator
 				it = clusters.begin(), end = clusters.end();
 				it!=end;
@@ -683,6 +676,7 @@ public :
 				_loopClosureMap[m[i]]->write(out); out<<std::endl;
 			}
 		}
+		*/
 
 	}
 
