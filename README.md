@@ -1,6 +1,8 @@
 Introduction
 ------------
 
+UPDATE : Added timestamps in datasets/B25b/timestamps because of different number of poses in Odometry and Ground Truth g2o files
+
 This project contains the accompanying code for our RSS 2012 paper Robust Loop Closing over time
 
 Requirements
@@ -27,4 +29,16 @@ If you use this work, please cite our corresponding paper :
   year = {2012},<br>
   address = {Sydney, Australia},<br>
   month = {July}<br>
+}
+
+@article{Latif-IJRR-13,
+author = {Latif, Yasir and Cadena, César and Neira, José}, 
+title = {Robust loop closing over time for pose graph SLAM},
+volume = {32}, 
+number = {14}, 
+pages = {1611-1626}, 
+year = {2013}, 
+doi = {10.1177/0278364913498910}, 
+URL = {http://ijr.sagepub.com/content/32/14/1611.abstract}, 
+journal = {The International Journal of Robotics Research} 
 }
