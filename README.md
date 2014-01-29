@@ -31,14 +31,14 @@ If you use this work, please cite our corresponding paper :
   month = {July}<br>
 }
 
-@article{Latif-IJRR-13,
-author = {Latif, Yasir and Cadena, César and Neira, José}, 
-title = {Robust loop closing over time for pose graph SLAM},
-volume = {32}, 
-number = {14}, 
-pages = {1611-1626}, 
-year = {2013}, 
-doi = {10.1177/0278364913498910}, 
-URL = {http://ijr.sagepub.com/content/32/14/1611.abstract}, 
-journal = {The International Journal of Robotics Research} 
+@article{Latif-IJRR-13,<br>
+author = {Latif, Yasir and Cadena, César and Neira, José},<br> 
+title = {Robust loop closing over time for pose graph SLAM},<br>
+volume = {32}, <br>
+number = {14}, <br>
+pages = {1611-1626},<br> 
+year = {2013}, <br>
+doi = {10.1177/0278364913498910},<br> 
+URL = {http://ijr.sagepub.com/content/32/14/1611.abstract},<br> 
+journal = {The International Journal of Robotics Research} <br>
 }
