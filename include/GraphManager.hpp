@@ -28,7 +28,7 @@
 #ifndef GRAPHMANAGER_HPP_
 #define GRAPHMANAGER_HPP_
 
-#include <g2o/core/graph_optimizer_sparse.h>
+#include <g2o/core/sparse_optimizer.h>
 #include "Cluster.hpp"
 #include "GraphStorage.hpp"
 

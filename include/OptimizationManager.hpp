@@ -33,16 +33,14 @@
 #endif
 //#include "Viewer/Viewer.hpp"
 
-#include <g2o/core/factory.h>
-#include <g2o/core/block_solver.h>
-#include <g2o/math_groups/se2.h>
-#include <g2o/types/slam2d/edge_se2.h>
-#include <g2o/types/slam2d/vertex_se2.h>
+#include "g2o/core/sparse_optimizer.h"
+#include "g2o/core/block_solver.h"
+#include "g2o/core/factory.h"
+#include "g2o/core/optimization_algorithm_gauss_newton.h"
+#include "g2o/solvers/csparse/linear_solver_csparse.h"
+#include "g2o/types/slam2d/edge_se2.h"
+#include "g2o/types/slam2d/vertex_se2.h"
 
-#include <g2o/types/slam3d/edge_se3_quat.h>
-#include <g2o/types/slam3d/vertex_se3_quat.h>
-
-#include <g2o/solvers/csparse/linear_solver_csparse.h>
 
 #include <boost/math/distributions/chi_squared.hpp>
 
@@ -60,8 +58,8 @@ class OptimizationManager
 	typedef std::map< std::pair<int,int>, edgeType * > OdometryMap;
 	typedef std::map< std::pair<int,int>, edgeType * > LoopClosureMap;
 
-	typedef BlockSolver< BlockSolverTraits<-1, -1> >  SlamBlockSolver;
-	typedef LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
+	typedef g2o::BlockSolver< g2o::BlockSolverTraits<-1, -1> >  SlamBlockSolver;
+	typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
 
 	GraphManager _graphManager;
 	GraphStorage<vertexType*> _graphStorage;
@@ -99,10 +97,13 @@ class OptimizationManager
 public :
 	OptimizationManager(){
 
-		linearSolver = new SlamLinearSolver();
+		SlamLinearSolver* linearSolver = new SlamLinearSolver();
 		linearSolver->setBlockOrdering(false);
-		solver = new SlamBlockSolver(&optimizer, linearSolver);
-		optimizer.setSolver(solver);
+		SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
+		g2o::OptimizationAlgorithmGaussNewton* solverGauss   = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
+
+		optimizer.setAlgorithm(solverGauss);
+
 		_initialized = false;
 
 	}

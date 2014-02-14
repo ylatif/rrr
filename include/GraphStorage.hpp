@@ -27,7 +27,7 @@
 #ifndef GRAPHSTORAGE_HPP_
 #define GRAPHSTORAGE_HPP_
 
-#include <g2o/core/graph_optimizer_sparse.h>
+#include <g2o/core/sparse_optimizer.h>
 using namespace g2o;
 template <typename VertexPtrType>
 class GraphStorage
