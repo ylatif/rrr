@@ -1,5 +1,5 @@
 // RRR - Robust Loop Closing over Time
-// Copyright (C) 2012 Y.Latif, C.Cadena, J.Neira
+// Copyright (C) 2014 Y.Latif, C.Cadena, J.Neira
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -24,50 +24,25 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef GRAPHSTORAGE_HPP_
-#define GRAPHSTORAGE_HPP_
 
-#include <g2o/core/sparse_optimizer.h>
-using namespace g2o;
-template <typename VertexPtrType>
-class GraphStorage
-{
-	public:
+#ifndef TYPES_HPP_
+#define TYPES_HPP_
 
-	void store(g2o::SparseOptimizer& optimizer)
-	{
-		g2o::OptimizableGraph::VertexIDMap::iterator
-			vIt = optimizer.vertices().begin(),
-			vEnd = optimizer.vertices().end();
+#include <map>
+#include <set>
+#include <vector>
 
-		for(; vIt!=vEnd ; vIt++ ) dynamic_cast<VertexPtrType>(vIt->second)->push();
+	typedef std::pair<int,int> 				IntPair;
+	typedef std::set< IntPair> 				IntPairSet;
+	typedef std::vector< IntPair > 			IntPairVector;
+	typedef std::map< IntPair, int > 		IntPairIDMap;
+	typedef std::map< int, IntPair > 		IDintPairMap;
+	typedef std::map< int, IntPairVector > 	IDintPairVectorMap;
+	typedef std::map< int, IntPairSet > 	IDintPairSetMap;
+	typedef std::vector<float>				FloatVector;
+	typedef std::vector<int>				IntVector;
+	typedef std::set<int>					IntSet;
+	typedef std::map < IntPair, double >    IntPairDoubleMap;
 
-	}
 
-	void load(SparseOptimizer& optimizer)
-	{
-		g2o::OptimizableGraph::VertexIDMap::iterator
-			vIt = optimizer.vertices().begin(),
-			vEnd = optimizer.vertices().end();
-
-		for(; vIt!=vEnd ; vIt++ )	dynamic_cast<VertexPtrType>(vIt->second)->pop();
-
-		// HACK : store again!
-		store(optimizer);
-	}
-
-	void reset(SparseOptimizer& optimizer)
-	{
-		g2o::OptimizableGraph::VertexIDMap::iterator
-					vIt = optimizer.vertices().begin(),
-					vEnd = optimizer.vertices().end();
-
-				for(; vIt!=vEnd ; vIt++ ){
-					dynamic_cast<VertexPtrType>(vIt->second)->discardTop();
-					dynamic_cast<VertexPtrType>(vIt->second)->push();
-				}
-	}
-
-};
-
-#endif /* GRAPHSTORAGE_HPP_ */
+#endif /* TYPES_HPP_ */

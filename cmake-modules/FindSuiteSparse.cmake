@@ -1,0 +1,61 @@
+# Locate the g2o libraries
+# A general framework for graph optimization. 
+#
+# This module defines
+# G2O_FOUND, if false, do not try to link against g2o 
+# G2O_LIBRARIES, path to the libg2o
+# G2O_INCLUDE_DIR, where to find the g2o header files
+#
+# Niko Suenderhauf <niko@etit.tu-chemnitz.de>
+
+IF(UNIX)
+
+  IF(SUITESPARSE_INCLUDE_DIR AND SUITESPARSE_LIBRARIES)
+    # in cache already
+    SET(SUITESPARSE_FIND_QUIETLY TRUE)
+  ENDIF(SUITESPARSE_INCLUDE_DIR AND SUITESPARSE_LIBRARIES)
+
+  MESSAGE(STATUS "Searching for suitesparse ...")
+
+  FIND_PATH(SUITESPARSE_INCLUDE_DIR
+    NAMES cs.h cholmod.h 
+    PATHS
+    /usr/local
+    /usr
+    PATH_SUFFIXES include/suitesparse include
+  )
+  IF (SUITESPARSE_INCLUDE_DIR)
+    MESSAGE(STATUS "Found suitesparse headers in: ${SUITESPARSE_INCLUDE_DIR}")
+  ENDIF (SUITESPARSE_INCLUDE_DIR)
+
+  FIND_LIBRARY(SUITESPARSE_CS_LIBRARIES 
+    NAMES cxsparse    
+    PATHS
+    /usr/local
+    /usr
+    PATH_SUFFIXES lib
+  )
+  
+  SET(SUITESPARSE_LIBRARIES ${SUITESPARSE_CS_LIBRARIES})
+
+ 
+  IF(SUITESPARSE_INCLUDE_DIR AND SUITESPARSE_LIBRARIES)
+    SET(SUITESPARSE_FOUND "YES")
+    IF(NOT SUITESPARSE_FIND_QUIETLY)
+      MESSAGE(STATUS "Found suitesparse: ${SUITESPARSE_LIBRARIES}")
+    ENDIF(NOT SUITESPARSE_FIND_QUIETLY)
+  ELSE(SUITESPARSE_INCLUDE_DIR AND SUITESPARSE_LIBRARIES)
+    IF(NOT SUITESPARSE_LIBRARIES)
+      IF(SUITESPARSE_FIND_REQUIRED)
+        message(FATAL_ERROR "Could not find cxsparse!")
+      ENDIF(SUITESPARSE_FIND_REQUIRED)
+    ENDIF(NOT SUITESPARSE_LIBRARIES)
+
+    IF(NOT SUITESPARSE_INCLUDE_DIR)
+      IF(SUITESPARSE_FIND_REQUIRED)
+        message(FATAL_ERROR "Could not find suitesparse include directory!")
+      ENDIF(SUITESPARSE_FIND_REQUIRED)
+    ENDIF(NOT SUITESPARSE_INCLUDE_DIR)
+  ENDIF(SUITESPARSE_INCLUDE_DIR AND SUITESPARSE_LIBRARIES)
+
+ENDIF(UNIX)
