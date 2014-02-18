@@ -37,8 +37,8 @@ The example folder contains two executables.
 - RRR\_2D\_optimizer\_g2o : needs a 2D SLAM g2o file as input and generates rrr-solved.g2o as output.
 - RRR\_3D\_from\_disk\_g2o : needs a 3D SLAM g2o file as input 
 
-The code has been restructed into more organized blocks. The main class of interest is include/RRR.hpp.
-Further information can be found in doc/
+The code has been restructured into more organized blocks. The main class of interest is include/RRR.hpp.
+Further information on how to use this in your on project can be found in doc/
 
 Kindly drop me an email at ylatif AT unizar DOT es in case something is not working.
 
