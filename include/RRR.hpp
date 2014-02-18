@@ -73,6 +73,9 @@ public:
 		bool status = gWrapper->read(filename);		// Read the g2o file
 		if(!status) return status;
 		gWrapper->getLoopClosures(loops);
+		
+		std::cerr<<"Number of loop closures : "<<loops.size()<<std::endl;
+		
 		clusterizer.clusterize(loops,clusteringThreshold);	// Make clusters
 		return true;
 	}
@@ -82,10 +85,11 @@ public:
 		IntPairSet loops;
 		gWrapper->setOptimizer(optimizerPtr);
 		gWrapper->getLoopClosures(loops);
-
-		std::cerr<<"Loop closures : "<<loops.size()<<std::endl;
+		
+		std::cerr<<"Number of loop closures : "<<loops.size()<<std::endl;
 
 		clusterizer.clusterize(loops,clusteringThreshold);	// Make clusters
+		
 		return true;
 	}
 
@@ -243,8 +247,9 @@ public:
 			rejectSet,
 			tempRejectSet;
 
-		std::cout<<"Number of Clusters found :"<<clusterizer.clusterCount()<<std::endl;
-		std::cout<<"Checking Intra cluster consistency : ";
+		
+		std::cout<<"Number of Clusters found : "<<clusterizer.clusterCount()<<std::endl;
+		std::cout<<"Checking Intra cluster consistency : "<<std::endl;
 		for(size_t i=0; i< clusterizer.clusterCount(); i++)
 		{
 			std::cout<<i<<" "; std::cout.flush();
@@ -253,7 +258,7 @@ public:
 				consistentClusters.insert(i);
 			}
 		}
-		std::cout<<"done"<<std::endl;
+		std::cout<<"done"<<std::endl<<std::endl;
 
 		/// ------------- consistentCluster are self-consistent --------- ////
 

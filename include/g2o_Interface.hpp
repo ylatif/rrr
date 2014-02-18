@@ -115,8 +115,8 @@ public:
 			}
 
 		}
-		std::cout<<"# Odom: "<<odomteryEdges.size()<<std::endl;
-		std::cout<<"# LC :"<<loops.size()<<std::endl;
+		//std::cout<<"# Odom: "<<odomteryEdges.size()<<std::endl;
+		//std::cout<<"# LC :"<<loops.size()<<std::endl;
 		return true;
 	}
 
