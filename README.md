@@ -21,7 +21,9 @@ Installation
   
 - install boost maths ( On ubuntu : sudo apt-get install libboost-math1.42-dev)
 
-- in the directory rrr/build<br>
+- in the directory rrr/<br>
+  mkdir build <br>
+  cd build <br>
   cmake .. <br>
   make <br>
  
