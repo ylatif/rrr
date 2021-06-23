@@ -24,7 +24,6 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 #ifndef BACKEND_G2O_HPP_
 #define BACKEND_G2O_HPP_
 
@@ -35,92 +34,87 @@
 #include "g2o/core/factory.h"
 #include "g2o/core/optimization_algorithm_gauss_newton.h"
 #include "g2o/solvers/csparse/linear_solver_csparse.h"
+#include "g2o/solvers/eigen/linear_solver_eigen.h"
 
+using namespace g2o;
 
+G2O_USE_TYPE_GROUP(slam2d);
 
-typedef g2o::BlockSolver< g2o::BlockSolverTraits<-1, -1> >  		SlamBlockSolver;
-typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> 	SlamLinearSolver;
-
-template<typename VertexType, typename EdgeType>
+template <typename VertexType, typename EdgeType>
 class G2O_Interface : public BaseBackend
 {
-	typedef
-			std::map< IntPair, g2o::HyperGraph::Edge* >
-			IntPairToEdgePtrMap;
+	typedef std::map<IntPair, g2o::HyperGraph::Edge *>
+		IntPairToEdgePtrMap;
 
-	typedef
-			std::vector< g2o::HyperGraph::Edge* >
-			EdgePtrVector;
+	typedef std::vector<g2o::HyperGraph::Edge *>
+		EdgePtrVector;
 
 	typedef g2o::SparseOptimizer OptimizerType;
 
-	EdgePtrVector 					odomteryEdges;
-	IntPairToEdgePtrMap				loopclosureEdges;
+	EdgePtrVector odomteryEdges;
+	IntPairToEdgePtrMap loopclosureEdges;
 
-	g2o::SparseOptimizer*			optimizer;
-	g2o::OptimizableGraph::EdgeSet 	activeEdges;
+	g2o::SparseOptimizer *optimizer;
+	g2o::OptimizableGraph::EdgeSet activeEdges;
 
 	bool initialized;
 
 public:
-
 	G2O_Interface()
 	{
 		optimizer = NULL;
 		initialized = false;
 	}
 
-	bool setOptimizer(void* opt)
+	bool setOptimizer(void *opt)
 	{
-		if(optimizer==NULL)
+		if (optimizer == NULL)
 		{
-			optimizer = (OptimizerType*)opt;
+			optimizer = (OptimizerType *)opt;
 			initialized = true;
 			store();
 		}
 		else
 		{
-			std::cerr<<"Already existing optimizer?"<<std::endl;
+			std::cerr << "Already existing optimizer?" << std::endl;
 			return false;
 		}
 		return true;
 	}
 
-
-	bool getLoopClosures(IntPairSet& loops)
+	bool getLoopClosures(IntPairSet &loops)
 	{
-		if(optimizer == NULL)
+		if (optimizer == NULL)
 		{
-			std::cerr<<"Please read in a g2o file or pass the pointer to an existing optimizer before calling getLoopClosures()"<<std::endl;
+			std::cerr << "Please read in a g2o file or pass the pointer to an existing optimizer before calling getLoopClosures()" << std::endl;
 			return false;
 		}
 
 		g2o::OptimizableGraph::EdgeSet::iterator
-		eIt = optimizer->edges().begin(),
-		eEnd = optimizer->edges().end();
+			eIt = optimizer->edges().begin(),
+			eEnd = optimizer->edges().end();
 
-		for( ; eIt!=eEnd ; eIt++)
+		for (; eIt != eEnd; eIt++)
 		{
 
 			int e1 = (*eIt)->vertices()[0]->id();
 			int e2 = (*eIt)->vertices()[1]->id();
-			if(std::abs(e1-e2) > 1)
+			if (std::abs(e1 - e2) > 1)
 			{
-				loops.insert(IntPair(e1,e2));
-				loopclosureEdges[IntPair(e1,e2)] = *eIt;
+				loops.insert(IntPair(e1, e2));
+				loopclosureEdges[IntPair(e1, e2)] = *eIt;
 			}
 			else
 			{
 				odomteryEdges.push_back(*eIt);
 			}
-
 		}
 		//std::cout<<"# Odom: "<<odomteryEdges.size()<<std::endl;
 		//std::cout<<"# LC :"<<loops.size()<<std::endl;
 		return true;
 	}
 
-	virtual ~G2O_Interface(){}
+	virtual ~G2O_Interface() {}
 
 	int vertexCount() { return optimizer->vertices().size(); };
 
@@ -130,7 +124,8 @@ public:
 			vIt = optimizer->vertices().begin(),
 			vEnd = optimizer->vertices().end();
 
-		for(; vIt!=vEnd ; vIt++ )	static_cast< VertexType* >(vIt->second)->push();
+		for (; vIt != vEnd; vIt++)
+			static_cast<VertexType *>(vIt->second)->push();
 
 		return true;
 	}
@@ -141,33 +136,35 @@ public:
 			vIt = optimizer->vertices().begin(),
 			vEnd = optimizer->vertices().end();
 
-		for(; vIt!=vEnd ; vIt++ )	static_cast< VertexType* >(vIt->second)->pop();
+		for (; vIt != vEnd; vIt++)
+			static_cast<VertexType *>(vIt->second)->pop();
 
 		// HACK : store again!
 		store();
 		return true;
-
 	}
 
 	bool read(
-			const char* filename
-			)
+		const char *filename)
 	{
-		if(optimizer != NULL)
+		if (optimizer != NULL)
 		{
-			std::cerr<<"An allocated optimizer already exists "<<std::endl;
+			std::cerr << "An allocated optimizer already exists " << std::endl;
 			return false;
 		}
 		optimizer = new g2o::SparseOptimizer;
-		SlamLinearSolver* linearSolver = new SlamLinearSolver();
+		auto linearSolver = g2o::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
 		linearSolver->setBlockOrdering(false);
-		SlamBlockSolver* blockSolver = new SlamBlockSolver(linearSolver);
-		g2o::OptimizationAlgorithmGaussNewton* solverGauss   = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
-		optimizer->setAlgorithm(solverGauss);
+		auto blockSolver = g2o::make_unique<BlockSolverX>(std::move(linearSolver));
 
+		OptimizationAlgorithmGaussNewton *optimizationAlgorithm =
+			new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
+		optimizer->setAlgorithm(optimizationAlgorithm);
 
-		if(!optimizer->load(filename)){
-			std::cerr<<"Can't find file to read : "<<filename<<std::endl;;
+		if (!optimizer->load(filename))
+		{
+			std::cerr << "Can't find file to read : " << filename << std::endl;
+			;
 			return false;
 		}
 		store();
@@ -179,70 +176,66 @@ public:
 	// @return: The error of each link + overall error of the active part of the graph as the last element of the vector
 
 	IntPairDoubleMap optimize(
-			const IntPairSet& activeLoops,
-			const int nIterations
-			)
+		const IntPairSet &activeLoops,
+		const int nIterations)
 	{
 
 		activeEdges.clear();
 		activeEdges.insert(
-				odomteryEdges.begin(),
-				odomteryEdges.end()
-				);
+			odomteryEdges.begin(),
+			odomteryEdges.end());
 
-		for(
+		for (
 			IntPairSet::const_iterator it = activeLoops.begin(), end = activeLoops.end();
-			it!=end;
+			it != end;
 			it++)
 		{
-			activeEdges.insert( loopclosureEdges[*it]);
+			activeEdges.insert(loopclosureEdges[*it]);
 		}
 
 		IntPairDoubleMap loopClosureLinkError;
 
-
 		restore();
 		//
-			optimizer->setVerbose(false);
-			optimizer->findGauge()->setFixed(true);
-			//optimizer->vertex(0)->setFixed(true);
-			optimizer->initializeOptimization(activeEdges);
-			optimizer->optimize(nIterations,false);
-			optimizer->computeActiveErrors();
+		optimizer->setVerbose(false);
+		optimizer->findGauge()->setFixed(true);
+		//optimizer->vertex(0)->setFixed(true);
+		optimizer->initializeOptimization(activeEdges);
+		optimizer->optimize(nIterations, false);
+		optimizer->computeActiveErrors();
 
-			for(
-				IntPairSet::const_iterator it = activeLoops.begin(), end = activeLoops.end();
-				it!=end;
-				it++)
-			{
-				//dynamic_cast< EdgeType* >(loopclosureEdges[*it])->computeError();
-				loopClosureLinkError[*it] = dynamic_cast< EdgeType* >(loopclosureEdges[*it])->chi2();
+		for (
+			IntPairSet::const_iterator it = activeLoops.begin(), end = activeLoops.end();
+			it != end;
+			it++)
+		{
+			//dynamic_cast< EdgeType* >(loopclosureEdges[*it])->computeError();
+			loopClosureLinkError[*it] = dynamic_cast<EdgeType *>(loopclosureEdges[*it])->chi2();
+		}
 
-			}
-
-			// NOTE : The number of edges involved is the last element
-			loopClosureLinkError[IntPair(-1,0)] = optimizer->activeChi2(); // There can be no links with negative IDS
-			loopClosureLinkError[IntPair(-1,-1)] = optimizer->activeEdges().size();
+		// NOTE : The number of edges involved is the last element
+		loopClosureLinkError[IntPair(-1, 0)] = optimizer->activeChi2(); // There can be no links with negative IDS
+		loopClosureLinkError[IntPair(-1, -1)] = optimizer->activeEdges().size();
 
 		//
 		return loopClosureLinkError;
 	}
 
-	bool write(const char* filename, const IntPairSet& correctLoops)
+	bool write(const char *filename, const IntPairSet &correctLoops)
 	{
 		restore();
 		std::ofstream out(filename);
 
 		activeEdges.clear();
-		activeEdges.insert(odomteryEdges.begin(),odomteryEdges.end());
+		activeEdges.insert(odomteryEdges.begin(), odomteryEdges.end());
 
-		for ( IntPairSet::const_iterator it = correctLoops.begin(), end = correctLoops.end();
-				it!=end;
-				it++)
+		for (IntPairSet::const_iterator it = correctLoops.begin(), end = correctLoops.end();
+			 it != end;
+			 it++)
 		{
 			activeEdges.insert(loopclosureEdges[*it]);
 		}
-		optimizer->saveSubset(out,activeEdges);
+		optimizer->saveSubset(out, activeEdges);
 		out.close();
 
 		return true;
@@ -258,11 +251,11 @@ public:
 		return initialized;
 	}
 
-	bool removeEdges(const IntPairSet& falseLinks)
+	bool removeEdges(const IntPairSet &falseLinks)
 	{
-		for (IntPairSet::const_iterator it = falseLinks.begin(), end = falseLinks.end(); it!=end; ++it)
+		for (IntPairSet::const_iterator it = falseLinks.begin(), end = falseLinks.end(); it != end; ++it)
 		{
-			if(optimizer->removeEdge(loopclosureEdges[*it]))
+			if (optimizer->removeEdge(loopclosureEdges[*it]))
 			{
 				loopclosureEdges.erase(*it); // Clear up from our records as well
 			}
@@ -270,6 +263,5 @@ public:
 		return true;
 	}
 };
-
 
 #endif /* BACKEND_G2O_HPP_ */
