@@ -195,10 +195,12 @@ public:
 		clusterIDtoLoopsMap.erase(clusterID);
 
 		for(IntPairIDMap::iterator it= loopToClusterIDMap.begin();
-				it!=loopToClusterIDMap.end(); it++)
+				it!=loopToClusterIDMap.end(); /*no increment*/)
 		{
 			if(it->second == clusterID)
-				loopToClusterIDMap.erase(it->first);
+				it = loopToClusterIDMap.erase(it);
+			else
+				++it;
 		}
 
 		return true;
